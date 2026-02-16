@@ -1,9 +1,16 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronRight, MoreVertical, Send, RotateCcw, ExternalLink, Copy, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Risk } from '@/types/risk';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RiskRowAccordion } from './RiskRowAccordion';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
 type ScreenMode = 'view' | 'edit';
 
@@ -79,7 +86,7 @@ export function RiskRow({
       isSelected && "ring-2 ring-primary/30 border-primary/30",
     )}>
       <div className="px-4 py-3 space-y-1.5">
-        {/* Row 1: ID + Status + Risk Level + Chevron */}
+        {/* Row 1: ID + Risk Level + Status + Kebab */}
         <div className="flex items-center gap-2">
           {selectionMode && (
             <Checkbox
@@ -94,31 +101,49 @@ export function RiskRow({
           >
             {risk.id}
           </button>
-          <StatusTag status={risk.status} />
           <RiskLevelBadge level={risk.riskLevel} />
+          <StatusTag status={risk.status} />
           <div className="flex-1" />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-1 hover:bg-accent rounded transition-colors">
+                <MoreVertical className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem><Send className="w-3.5 h-3.5 mr-2" />Отправить на утверждение</DropdownMenuItem>
+              <DropdownMenuItem><RotateCcw className="w-3.5 h-3.5 mr-2" />Вернуть на доработку</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem><ExternalLink className="w-3.5 h-3.5 mr-2" />Открыть в новой вкладке</DropdownMenuItem>
+              <DropdownMenuItem><Copy className="w-3.5 h-3.5 mr-2" />Дублировать риск</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-destructive focus:text-destructive"><Trash2 className="w-3.5 h-3.5 mr-2" />Удалить</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Row 2: Chevron + Risk name */}
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="p-1 hover:bg-accent rounded transition-colors"
+            className="p-0.5 hover:bg-accent rounded transition-colors shrink-0"
           >
             {isOpen
-              ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
-              : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              ? <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              : <ChevronRight className="w-4 h-4 text-muted-foreground" />
             }
+          </button>
+          <button
+            onClick={() => onRiskClick(risk)}
+            className="text-sm font-medium text-foreground hover:text-primary transition-colors text-left truncate"
+            title={risk.riskName}
+          >
+            {risk.riskName}
           </button>
         </div>
 
-        {/* Row 2: Risk name */}
-        <button
-          onClick={() => onRiskClick(risk)}
-          className="text-sm font-medium text-foreground hover:text-primary transition-colors text-left block w-full truncate"
-          title={risk.riskName}
-        >
-          {risk.riskName}
-        </button>
-
         {/* Row 3: Context */}
-        <div className="text-xs text-muted-foreground truncate">
+        <div className="text-xs text-muted-foreground truncate pl-6">
           ↳ {risk.process} · {risk.subdivision} · {risk.block}
         </div>
 
