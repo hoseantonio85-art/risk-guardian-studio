@@ -10,6 +10,7 @@ interface FullscreenLightboxProps {
   headerContent?: React.ReactNode;
   wide?: boolean;
   footer?: React.ReactNode;
+  floatingAboveFooter?: React.ReactNode;
 }
 
 export function FullscreenLightbox({ 
@@ -21,6 +22,7 @@ export function FullscreenLightbox({
   headerContent,
   wide = false,
   footer,
+  floatingAboveFooter,
 }: FullscreenLightboxProps) {
   if (!isOpen) return null;
 
@@ -67,6 +69,9 @@ export function FullscreenLightbox({
           {children}
         </div>
       </div>
+
+      {/* Floating element above footer */}
+      {floatingAboveFooter}
 
       {/* Footer */}
       {footer && (

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { History, Plus, FileText, Sparkles, TrendingUp, TrendingDown, ArrowRight, Pencil, XCircle } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -60,11 +59,8 @@ export function RiskDetailView({ risk, isOpen, onClose, onEdit, onOpenWizard }: 
   const [utilizationOpen, setUtilizationOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('info');
-  const [shortNumbers, setShortNumbers] = useState(true);
 
-  const fmtVal = (val: number) => shortNumbers
-    ? `${val.toLocaleString('ru-RU')} млн`
-    : val >= 1 ? `${(val * 1_000_000).toLocaleString('ru-RU')}` : val.toLocaleString('ru-RU');
+  const fmtVal = (val: number) => `${val.toLocaleString('ru-RU')} млн`;
 
   if (!risk) return null;
 
@@ -159,15 +155,7 @@ export function RiskDetailView({ risk, isOpen, onClose, onEdit, onOpenWizard }: 
 
             {/* Potential Losses */}
             <section id="potential" className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-base font-semibold">Потенциальные потери</h2>
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs text-muted-foreground cursor-pointer" htmlFor="num-toggle">
-                    {shortNumbers ? 'млн' : 'полные числа'}
-                  </Label>
-                  <Switch id="num-toggle" checked={!shortNumbers} onCheckedChange={v => setShortNumbers(!v)} />
-                </div>
-              </div>
+              <h2 className="text-base font-semibold">Потенциальные потери</h2>
               <div className="grid grid-cols-3 gap-4">
                 {([
                   { label: 'Прямые потери', value: risk.cleanOpRisk.value, delta: 12 },
