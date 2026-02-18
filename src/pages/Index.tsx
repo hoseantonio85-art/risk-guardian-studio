@@ -88,6 +88,10 @@ const Index = () => {
       directLosses: number;
       creditLosses: number;
       indirectLosses: number;
+      potentialLosses: number;
+      directLimit: number;
+      creditLimit: number;
+      indirectLimit: number;
       maxRiskLevel: string;
       statusBreakdown: Record<string, number>;
     }> = {};
@@ -101,6 +105,10 @@ const Index = () => {
           directLosses: 0,
           creditLosses: 0,
           indirectLosses: 0,
+          potentialLosses: 0,
+          directLimit: 0,
+          creditLimit: 0,
+          indirectLimit: 0,
           maxRiskLevel: 'Низкий',
           statusBreakdown: {},
         };
@@ -110,6 +118,10 @@ const Index = () => {
       g.directLosses += risk.cleanOpRisk.value || 0;
       g.creditLosses += risk.creditOpRisk.value || 0;
       g.indirectLosses += risk.indirectLosses.value || 0;
+      g.potentialLosses += risk.potentialLosses || 0;
+      g.directLimit += risk.cleanOpRisk.limit || 0;
+      g.creditLimit += risk.creditOpRisk.limit || 0;
+      g.indirectLimit += risk.indirectLosses.limit || 0;
       if ((riskLevelPriority[risk.riskLevel] || 0) > (riskLevelPriority[g.maxRiskLevel] || 0)) {
         g.maxRiskLevel = risk.riskLevel;
       }
@@ -434,10 +446,6 @@ const Index = () => {
 
               <div className="flex-1" />
 
-              <span className="text-sm text-muted-foreground mr-3">
-                Показано {filteredRisks.length} из {risks.length}
-              </span>
-
               <ToggleGroup
                 type="single"
                 value={viewMode}
@@ -503,6 +511,10 @@ const Index = () => {
                     directLosses={group.directLosses}
                     creditLosses={group.creditLosses}
                     indirectLosses={group.indirectLosses}
+                    potentialLosses={group.potentialLosses}
+                    directUtilization={group.directLimit > 0 ? Math.round((group.directLosses / group.directLimit) * 100) : 0}
+                    creditUtilization={group.creditLimit > 0 ? Math.round((group.creditLosses / group.creditLimit) * 100) : 0}
+                    indirectUtilization={group.indirectLimit > 0 ? Math.round((group.indirectLosses / group.indirectLimit) * 100) : 0}
                     onClick={() => {
                       setSelectedProcessFilter(group.processName);
                       setViewMode('list');

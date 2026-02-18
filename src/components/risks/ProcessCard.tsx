@@ -8,6 +8,10 @@ interface ProcessCardProps {
   directLosses: number;
   creditLosses: number;
   indirectLosses: number;
+  potentialLosses: number;
+  directUtilization: number;
+  creditUtilization: number;
+  indirectUtilization: number;
   onClick: () => void;
 }
 
@@ -31,13 +35,27 @@ function formatCurrency(value: number): string {
   return value.toLocaleString('ru-RU');
 }
 
-function LossChip({ label, value }: { label: string; value: number }) {
+function getBarColor(utilization: number): string {
+  if (utilization > 80) return 'bg-destructive';
+  if (utilization >= 50) return 'bg-yellow-500';
+  return 'bg-primary';
+}
+
+function LossChipWithBar({ label, value, utilization }: { label: string; value: number; utilization: number }) {
+  const cappedUtil = Math.min(utilization, 100);
+
   return (
-    <div className="flex-1 min-w-[120px] bg-muted/60 rounded-lg px-3 py-2 h-[52px] flex flex-col justify-center">
-      <span className="text-[10px] text-muted-foreground leading-tight">{label}</span>
-      <span className="text-sm font-semibold text-foreground leading-tight">
+    <div className="flex-1 min-w-0 bg-muted/60 rounded-lg px-2 py-1.5 flex flex-col justify-between overflow-hidden">
+      <span className="text-[10px] text-muted-foreground leading-tight truncate">{label}</span>
+      <span className="text-sm font-bold text-foreground leading-tight">
         {formatCurrency(value)}
       </span>
+      <div className="w-full h-[3px] bg-border/60 rounded-sm mt-1">
+        <div
+          className={cn("h-full rounded-sm", getBarColor(utilization))}
+          style={{ width: `${cappedUtil}%` }}
+        />
+      </div>
     </div>
   );
 }
@@ -50,6 +68,10 @@ export function ProcessCard({
   directLosses,
   creditLosses,
   indirectLosses,
+  potentialLosses,
+  directUtilization,
+  creditUtilization,
+  indirectUtilization,
   onClick,
 }: ProcessCardProps) {
   const statusParts = Object.entries(statusBreakdown)
@@ -77,12 +99,19 @@ export function ProcessCard({
         )}
       </div>
 
-      {/* Row 3: Loss chips */}
-      <div className="flex items-center gap-2 pt-1.5 border-t border-border/50">
-        <LossChip label="Прямые" value={directLosses} />
-        <LossChip label="Кредитные" value={creditLosses} />
-        <LossChip label="Косвенные" value={indirectLosses} />
+      {/* Row 3: Loss chips with progress bars */}
+      <div className="flex items-stretch gap-1.5 pt-1.5 border-t border-border/50">
+        <LossChipWithBar label="Прямые" value={directLosses} utilization={directUtilization} />
+        <LossChipWithBar label="Кредитные" value={creditLosses} utilization={creditUtilization} />
+        <LossChipWithBar label="Косвенные" value={indirectLosses} utilization={indirectUtilization} />
       </div>
+
+      {/* Row 4: Potential losses */}
+      {potentialLosses > 0 && (
+        <div className="text-xs text-muted-foreground pt-1">
+          Потенциальные потери: <span className="font-medium text-foreground">{formatCurrency(potentialLosses)} ₽</span>
+        </div>
+      )}
     </button>
   );
 }
