@@ -186,53 +186,53 @@ function CollapsibleScenario({
   return (
     <div className="rounded-xl bg-muted/40 border border-border overflow-hidden">
       {/* Header — always visible */}
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-3 w-full px-5 py-3.5 text-left hover:bg-muted/60 transition-colors"
-      >
-        {isOpen ? (
-          <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
-        ) : (
-          <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-        )}
-        <h4 className="text-sm font-semibold shrink-0">Сценарий {index + 1}</h4>
-        {!isOpen && (
-          <span className="text-xs text-muted-foreground truncate">
-            Потенциальные потери: <span className="font-medium text-foreground">{formatNum(scenarioTotal)} ₽</span>
-            {' · '}Доля: <span className="font-medium text-foreground">{percentage}%</span>
-            {scenario.probability > 0 && (
-              <>{' · '}Вероятность: <span className="font-medium text-foreground">{scenario.probability}%</span></>
-            )}
-          </span>
-        )}
-        <div className="flex-1" />
-        {isOpen && (
-          <>
-            <span className="text-xs text-muted-foreground shrink-0">
-              Доля: <span className="font-semibold text-foreground">{percentage}%</span>
-            </span>
-            <span className="text-xs text-muted-foreground shrink-0">
+      <div className="flex items-center gap-3 px-5 py-3.5">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-3 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
+        >
+          {isOpen ? (
+            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+          )}
+          <h4 className="text-sm font-semibold shrink-0">Сценарий {index + 1}</h4>
+          {!isOpen && (
+            <span className="text-xs text-muted-foreground truncate">
               Потенциальные потери: <span className="font-medium text-foreground">{formatNum(scenarioTotal)} ₽</span>
+              {' · '}Доля: <span className="font-medium text-foreground">{percentage}%</span>
+              {scenario.probability > 0 && (
+                <>{' · '}Вероятность: <span className="font-medium text-foreground">{scenario.probability}%</span></>
+              )}
             </span>
-          </>
-        )}
-      </button>
+          )}
+          <div className="flex-1" />
+          {isOpen && (
+            <>
+              <span className="text-xs text-muted-foreground shrink-0">
+                Доля: <span className="font-semibold text-foreground">{percentage}%</span>
+              </span>
+              <span className="text-xs text-muted-foreground shrink-0">
+                Потенциальные потери: <span className="font-medium text-foreground">{formatNum(scenarioTotal)} ₽</span>
+              </span>
+            </>
+          )}
+        </button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0"
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          disabled={!canRemove}
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
 
       {/* Expanded content */}
       {isOpen && (
         <div className="px-5 pb-5 pt-1 space-y-4 border-t border-border">
-          <div className="flex justify-end">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={(e) => { e.stopPropagation(); onRemove(); }}
-              disabled={!canRemove}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
 
           <Textarea
             value={scenario.description}
