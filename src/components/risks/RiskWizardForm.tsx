@@ -72,9 +72,22 @@ const defaultScenarios: ScenarioFormData[] = [
 
 type WizardStep = 1 | 2 | 3;
 
-/** Format number with thousand separators (spaces) */
+/** Format number with thousand separators (spaces) — full numbers, no "млн" */
 function formatNum(val: number): string {
   return val.toLocaleString('ru-RU');
+}
+
+/** Format a raw string into a display string with thousand separators */
+function formatInputDisplay(raw: string): string {
+  const digits = raw.replace(/[^\d]/g, '');
+  if (!digits) return '';
+  return parseInt(digits, 10).toLocaleString('ru-RU');
+}
+
+/** Parse a formatted display string back to numeric value */
+function parseInputValue(formatted: string): number {
+  const digits = formatted.replace(/[^\d]/g, '');
+  return parseInt(digits, 10) || 0;
 }
 
 function RiskLevelBadge({ level }: { level: Risk['riskLevel'] }) {
@@ -87,6 +100,48 @@ function RiskLevelBadge({ level }: { level: Risk['riskLevel'] }) {
     <span className={cn("text-xs px-2 py-0.5 rounded font-medium border", map[level])}>
       {level}
     </span>
+  );
+}
+
+/** Formatted number input — displays with thousand separators, stores raw numeric value */
+function FormattedInput({ 
+  value, 
+  onChange, 
+  placeholder = '0',
+  className,
+  min,
+  max,
+}: { 
+  value: number; 
+  onChange: (val: number) => void; 
+  placeholder?: string;
+  className?: string;
+  min?: number;
+  max?: number;
+}) {
+  const [display, setDisplay] = useState(() => value ? formatNum(value) : '');
+  
+  useEffect(() => {
+    setDisplay(value ? formatNum(value) : '');
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const formatted = formatInputDisplay(raw);
+    setDisplay(formatted);
+    let parsed = parseInputValue(raw);
+    if (min !== undefined) parsed = Math.max(min, parsed);
+    if (max !== undefined) parsed = Math.min(max, parsed);
+    onChange(parsed);
+  };
+
+  return (
+    <Input
+      value={display}
+      onChange={handleChange}
+      placeholder={placeholder}
+      className={className}
+    />
   );
 }
 
@@ -120,9 +175,9 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
     return [];
   });
 
-  const [cleanOpLimit, setCleanOpLimit] = useState(editRisk?.cleanOpRisk?.limit?.toString() || '0');
-  const [creditOpLimit, setCreditOpLimit] = useState(editRisk?.creditOpRisk?.limit?.toString() || '0');
-  const [indirectLimit, setIndirectLimit] = useState(editRisk?.indirectLosses?.limit?.toString() || '0');
+  const [cleanOpLimit, setCleanOpLimit] = useState(editRisk?.cleanOpRisk?.limit || 0);
+  const [creditOpLimit, setCreditOpLimit] = useState(editRisk?.creditOpRisk?.limit || 0);
+  const [indirectLimit, setIndirectLimit] = useState(editRisk?.indirectLosses?.limit || 0);
 
   // Step 3
   const [mirrors, setMirrors] = useState<Mirror[]>(editRisk?.mirrors || []);
@@ -133,11 +188,11 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
   const [memoDismissed, setMemoDismissed] = useState(false);
 
   const hasLimits = useMemo(() => {
-    return (parseFloat(cleanOpLimit) || 0) > 0 || (parseFloat(creditOpLimit) || 0) > 0 || (parseFloat(indirectLimit) || 0) > 0;
+    return cleanOpLimit > 0 || creditOpLimit > 0 || indirectLimit > 0;
   }, [cleanOpLimit, creditOpLimit, indirectLimit]);
 
   // Reset dismissed when limits change
-  const handleLimitChange = useCallback((setter: (v: string) => void, value: string) => {
+  const handleLimitChange = useCallback((setter: (v: number) => void, value: number) => {
     setter(value);
     setMemoDismissed(false);
   }, []);
@@ -181,24 +236,18 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
   }, [totals.total]);
 
   const limitWarnings = useMemo(() => {
-    const cleanLim = parseFloat(cleanOpLimit) || 0;
-    const creditLim = parseFloat(creditOpLimit) || 0;
-    const indirectLim = parseFloat(indirectLimit) || 0;
     return {
-      cleanOp: cleanLim > 0 && totals.cleanOp > cleanLim,
-      creditOp: creditLim > 0 && totals.creditOp > creditLim,
-      indirect: indirectLim > 0 && totals.indirect > indirectLim,
+      cleanOp: cleanOpLimit > 0 && totals.cleanOp > cleanOpLimit,
+      creditOp: creditOpLimit > 0 && totals.creditOp > creditOpLimit,
+      indirect: indirectLimit > 0 && totals.indirect > indirectLimit,
     };
   }, [totals, cleanOpLimit, creditOpLimit, indirectLimit]);
 
   const mirrorLimits = useMemo(() => {
-    const cleanLim = parseFloat(cleanOpLimit) || 0;
-    const creditLim = parseFloat(creditOpLimit) || 0;
-    const indirectLim = parseFloat(indirectLimit) || 0;
     return mirrors.map(m => ({
-      cleanOp: Math.round(cleanLim * m.percentage / 100 * 10) / 10,
-      creditOp: Math.round(creditLim * m.percentage / 100 * 10) / 10,
-      indirect: Math.round(indirectLim * m.percentage / 100 * 10) / 10,
+      cleanOp: Math.round(cleanOpLimit * m.percentage / 100 * 10) / 10,
+      creditOp: Math.round(creditOpLimit * m.percentage / 100 * 10) / 10,
+      indirect: Math.round(indirectLimit * m.percentage / 100 * 10) / 10,
     }));
   }, [mirrors, cleanOpLimit, creditOpLimit, indirectLimit]);
 
@@ -246,9 +295,9 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
       setAiLoading(true);
       setTimeout(() => {
         setScenarios(defaultScenarios);
-        setCleanOpLimit('250');
-        setCreditOpLimit('150');
-        setIndirectLimit('60');
+        setCleanOpLimit(250);
+        setCreditOpLimit(150);
+        setIndirectLimit(60);
         setStrategy('Минимизировать');
         setQualitativeLosses('Нет');
         setAiPrefilled(true);
@@ -284,9 +333,9 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
       riskLevel: calculatedRiskLevel,
       responseStrategy: strategy,
       qualitativeLosses,
-      cleanOpRisk: { value: totals.cleanOp, utilization: 0, limit: parseFloat(cleanOpLimit) || 0 },
-      creditOpRisk: { value: totals.creditOp, utilization: 0, limit: parseFloat(creditOpLimit) || 0 },
-      indirectLosses: { value: totals.indirect, utilization: 0, limit: parseFloat(indirectLimit) || 0 },
+      cleanOpRisk: { value: totals.cleanOp, utilization: 0, limit: cleanOpLimit },
+      creditOpRisk: { value: totals.creditOp, utilization: 0, limit: creditOpLimit },
+      indirectLosses: { value: totals.indirect, utilization: 0, limit: indirectLimit },
       potentialLosses: totals.total,
       scenarios: scenarios.map((s, i) => ({
         id: s.id,
@@ -331,52 +380,56 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
   );
 
   const footerContent = (
-    <div className="space-y-0">
-      {/* Limits memo — above footer buttons */}
+    <div className="flex items-center justify-end gap-3">
+      <Button variant="outline" onClick={onClose}>Отмена</Button>
+      <Button onClick={handleSave} disabled={!step1Valid || !step2Valid}>
+        Сохранить
+      </Button>
+    </div>
+  );
+
+  // Limits memo — rendered as a separate floating element above footer
+  const limitsMemoElement = (
+    <>
       {showLimitsMemo && (
-        <div className="flex items-center gap-4 px-1 py-2 mb-2 rounded-lg border border-border bg-muted/40">
-          <span className="text-xs font-medium text-muted-foreground ml-3 shrink-0">Лимиты:</span>
-          <div className="flex items-center gap-4 flex-1 min-w-0">
-            <span className="text-xs">
-              <span className="text-muted-foreground">Прямые </span>
-              <span className="font-semibold text-foreground">{formatNum(parseFloat(cleanOpLimit) || 0)}</span>
-            </span>
-            <span className="text-xs">
-              <span className="text-muted-foreground">Кредитные </span>
-              <span className="font-semibold text-foreground">{formatNum(parseFloat(creditOpLimit) || 0)}</span>
-            </span>
-            <span className="text-xs">
-              <span className="text-muted-foreground">Косвенные </span>
-              <span className="font-semibold text-foreground">{formatNum(parseFloat(indirectLimit) || 0)}</span>
-            </span>
+        <div className="sticky bottom-[68px] z-10 mx-auto px-8" style={{ maxWidth: '1240px' }}>
+          <div className="flex items-center gap-4 px-4 py-2.5 rounded-lg border border-border bg-card shadow-sm">
+            <span className="text-xs font-medium text-muted-foreground shrink-0">Лимиты:</span>
+            <div className="flex items-center gap-5 flex-1 min-w-0">
+              <span className="text-xs">
+                <span className="text-muted-foreground">Прямые </span>
+                <span className="font-semibold text-foreground">{formatNum(cleanOpLimit)}</span>
+              </span>
+              <span className="text-xs">
+                <span className="text-muted-foreground">Кредитные </span>
+                <span className="font-semibold text-foreground">{formatNum(creditOpLimit)}</span>
+              </span>
+              <span className="text-xs">
+                <span className="text-muted-foreground">Косвенные </span>
+                <span className="font-semibold text-foreground">{formatNum(indirectLimit)}</span>
+              </span>
+            </div>
+            <button
+              onClick={() => setMemoDismissed(true)}
+              className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted transition-colors shrink-0"
+            >
+              <X className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
           </div>
-          <button
-            onClick={() => setMemoDismissed(true)}
-            className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted transition-colors shrink-0 mr-1"
-          >
-            <X className="w-3.5 h-3.5 text-muted-foreground" />
-          </button>
         </div>
       )}
-      {/* "Show limits" ghost link when memo dismissed */}
       {limitsOutOfView && hasLimits && memoDismissed && (
-        <div className="mb-2">
+        <div className="sticky bottom-[68px] z-10 mx-auto px-8" style={{ maxWidth: '1240px' }}>
           <button
             onClick={() => setMemoDismissed(false)}
-            className="text-xs text-primary hover:text-primary/80 flex items-center gap-1.5 transition-colors"
+            className="text-xs text-primary hover:text-primary/80 flex items-center gap-1.5 transition-colors py-1"
           >
             <Eye className="w-3.5 h-3.5" />
             Показать лимиты
           </button>
         </div>
       )}
-      <div className="flex items-center justify-end gap-3">
-        <Button variant="outline" onClick={onClose}>Отмена</Button>
-        <Button onClick={handleSave} disabled={!step1Valid || !step2Valid}>
-          Сохранить
-        </Button>
-      </div>
-    </div>
+    </>
   );
 
   // Step accordion header renderer
@@ -417,9 +470,10 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
       headerContent={headerContent}
       wide
       footer={footerContent}
+      floatingAboveFooter={limitsMemoElement}
     >
-      {/* Compact sticky stepper — under header */}
-      <div className="sticky top-0 z-10 -mx-8 px-8 py-3 bg-card border-b border-border mb-6">
+      {/* Compact sticky stepper — under header, uses top offset to sit below the sticky header */}
+      <div className="sticky top-[-32px] z-10 -mx-8 px-8 py-3 bg-card border-b border-border mb-6">
         <div className="flex items-center gap-0">
           {steps.map((step, i) => {
             const isActive = currentStep === step.num;
@@ -548,10 +602,10 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
                 <h3 className="text-base font-semibold">Лимиты на риск</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Прямые потери (млн)</Label>
-                    <Input
+                    <Label className="text-xs text-muted-foreground">Прямые потери</Label>
+                    <FormattedInput
                       value={cleanOpLimit}
-                      onChange={e => handleLimitChange(setCleanOpLimit, e.target.value)}
+                      onChange={v => handleLimitChange(setCleanOpLimit, v)}
                       placeholder="0"
                     />
                     {limitWarnings.cleanOp && (
@@ -562,10 +616,10 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Кредитные потери (млн)</Label>
-                    <Input
+                    <Label className="text-xs text-muted-foreground">Кредитные потери</Label>
+                    <FormattedInput
                       value={creditOpLimit}
-                      onChange={e => handleLimitChange(setCreditOpLimit, e.target.value)}
+                      onChange={v => handleLimitChange(setCreditOpLimit, v)}
                       placeholder="0"
                     />
                     {limitWarnings.creditOp && (
@@ -576,10 +630,10 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Косвенные потери (млн)</Label>
-                    <Input
+                    <Label className="text-xs text-muted-foreground">Косвенные потери</Label>
+                    <FormattedInput
                       value={indirectLimit}
-                      onChange={e => handleLimitChange(setIndirectLimit, e.target.value)}
+                      onChange={v => handleLimitChange(setIndirectLimit, v)}
                       placeholder="0"
                     />
                     {limitWarnings.indirect && (
@@ -598,15 +652,15 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
                 <div className="grid grid-cols-3 gap-4">
                   <div className="p-3 rounded-lg bg-muted/30 border border-border">
                     <p className="text-xs text-muted-foreground mb-1">Прямые потери</p>
-                    <p className="text-lg font-bold">{formatNum(totals.cleanOp)} <span className="text-xs font-normal text-muted-foreground">млн</span></p>
+                    <p className="text-lg font-bold">{formatNum(totals.cleanOp)}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-muted/30 border border-border">
                     <p className="text-xs text-muted-foreground mb-1">Кредитные потери</p>
-                    <p className="text-lg font-bold">{formatNum(totals.creditOp)} <span className="text-xs font-normal text-muted-foreground">млн</span></p>
+                    <p className="text-lg font-bold">{formatNum(totals.creditOp)}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-muted/30 border border-border">
                     <p className="text-xs text-muted-foreground mb-1">Косвенные потери</p>
-                    <p className="text-lg font-bold">{formatNum(totals.indirect)} <span className="text-xs font-normal text-muted-foreground">млн</span></p>
+                    <p className="text-lg font-bold">{formatNum(totals.indirect)}</p>
                   </div>
                 </div>
               </div>
@@ -658,7 +712,7 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
                             Доля: <span className="font-semibold text-foreground">{scenarioPercentages[index]}%</span>
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            Сумма: <span className="font-semibold text-foreground">{formatNum(scenarioTotal)} млн</span>
+                            Сумма: <span className="font-semibold text-foreground">{formatNum(scenarioTotal)}</span>
                           </span>
                         </div>
                         <Button
@@ -681,41 +735,37 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
 
                       <div className="grid grid-cols-4 gap-4">
                         <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Прямые потери (млн)</Label>
-                          <Input
-                            type="number"
-                            value={scenario.cleanOp || ''}
-                            onChange={e => updateScenario(scenario.id, 'cleanOp', parseFloat(e.target.value) || 0)}
+                          <Label className="text-xs text-muted-foreground">Прямые потери</Label>
+                          <FormattedInput
+                            value={scenario.cleanOp}
+                            onChange={v => updateScenario(scenario.id, 'cleanOp', v)}
                             placeholder="0"
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Кредитные потери (млн)</Label>
-                          <Input
-                            type="number"
-                            value={scenario.creditOp || ''}
-                            onChange={e => updateScenario(scenario.id, 'creditOp', parseFloat(e.target.value) || 0)}
+                          <Label className="text-xs text-muted-foreground">Кредитные потери</Label>
+                          <FormattedInput
+                            value={scenario.creditOp}
+                            onChange={v => updateScenario(scenario.id, 'creditOp', v)}
                             placeholder="0"
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Косвенные потери (млн)</Label>
-                          <Input
-                            type="number"
-                            value={scenario.indirect || ''}
-                            onChange={e => updateScenario(scenario.id, 'indirect', parseFloat(e.target.value) || 0)}
+                          <Label className="text-xs text-muted-foreground">Косвенные потери</Label>
+                          <FormattedInput
+                            value={scenario.indirect}
+                            onChange={v => updateScenario(scenario.id, 'indirect', v)}
                             placeholder="0"
                           />
                         </div>
                         <div className="space-y-1.5">
                           <Label className="text-xs text-muted-foreground">Вероятность (%)</Label>
-                          <Input
-                            type="number"
+                          <FormattedInput
+                            value={scenario.probability}
+                            onChange={v => updateScenario(scenario.id, 'probability', v)}
+                            placeholder="0"
                             min={0}
                             max={100}
-                            value={scenario.probability || ''}
-                            onChange={e => updateScenario(scenario.id, 'probability', Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
-                            placeholder="0"
                           />
                         </div>
                       </div>
@@ -791,15 +841,15 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
                   <div className="grid grid-cols-3 gap-4">
                     <div className="p-3 rounded-lg bg-card border border-border">
                       <p className="text-xs text-muted-foreground mb-0.5">Лимит: Прямые</p>
-                      <p className="text-sm font-semibold">{formatNum(mirrorLimits[idx]?.cleanOp || 0)} млн</p>
+                      <p className="text-sm font-semibold">{formatNum(mirrorLimits[idx]?.cleanOp || 0)}</p>
                     </div>
                     <div className="p-3 rounded-lg bg-card border border-border">
                       <p className="text-xs text-muted-foreground mb-0.5">Лимит: Кредитные</p>
-                      <p className="text-sm font-semibold">{formatNum(mirrorLimits[idx]?.creditOp || 0)} млн</p>
+                      <p className="text-sm font-semibold">{formatNum(mirrorLimits[idx]?.creditOp || 0)}</p>
                     </div>
                     <div className="p-3 rounded-lg bg-card border border-border">
                       <p className="text-xs text-muted-foreground mb-0.5">Лимит: Косвенные</p>
-                      <p className="text-sm font-semibold">{formatNum(mirrorLimits[idx]?.indirect || 0)} млн</p>
+                      <p className="text-sm font-semibold">{formatNum(mirrorLimits[idx]?.indirect || 0)}</p>
                     </div>
                   </div>
                 </div>
