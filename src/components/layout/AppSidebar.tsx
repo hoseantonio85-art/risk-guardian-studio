@@ -27,7 +27,7 @@ const navItems: NavItem[] = [
 
 export function AppSidebar() {
   return (
-    <aside className="w-56 bg-sidebar text-sidebar-foreground flex flex-col h-screen shrink-0">
+    <aside className="w-56 bg-gradient-to-b from-[hsl(220,80%,50%)] to-[hsl(270,70%,45%)] text-white flex flex-col h-screen shrink-0">
       {/* Logo */}
       <div className="p-5 flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center">
