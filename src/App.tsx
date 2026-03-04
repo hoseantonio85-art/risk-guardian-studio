@@ -6,8 +6,11 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
+// LOVABLE_KEEP_START
+// Не изменять этот блок: специфическая настройка basename для GitHub Pages
 const isGitHubPages = window.location.hostname.includes("github.io");
 const basename = isGitHubPages ? "/risk-guardian-studio" : "";
+// LOVABLE_KEEP_END
 
 const queryClient = new QueryClient();
 
@@ -16,7 +19,9 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      {/* LOVABLE_KEEP_START */}
       <BrowserRouter basename={basename}>
+      {/* LOVABLE_KEEP_END */}
         <Routes>
           <Route path="/" element={<Index />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
